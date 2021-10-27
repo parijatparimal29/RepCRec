@@ -1,8 +1,8 @@
 class transaction:
-    def __init__(id, tick, is_RO):
-        tid = id
-        current_instruction = ""
-        uncommitted_writes = {}
-        start_time = tick
-        transaction_type = is_RO
+    def __init__(self, id, tick, is_RO):
+        self.tid = id
+        self.current_instruction = ""
+        self.uncommitted_writes = {}
+        self.start_time = tick
+        self.transaction_type = is_RO
 
