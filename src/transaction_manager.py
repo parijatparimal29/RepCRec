@@ -3,6 +3,7 @@ import transaction
 class transaction_manager:
     def __init__(self):
         self.all_transactions = {}
+        self.last_transaction_tid = 0
         self.waits_for = {}
         self.wait_queue = {}
 
@@ -26,9 +27,18 @@ class transaction_manager:
         # Abort transaction
         return False
 
-    def create_transaction(self, tid):
-        # Create transaction
-        return False
+    def create_transaction(self, tick, type):
+        '''
+            This function creates new transactions.
+            Input:
+                tick: current tick
+                type: type of instruction. RO or Regular
+        '''
+        tid = self.last_transaction_tid + 1
+        new_transaction = transaction.transaction(tid, tick, type)
+        self.all_transactions[tid] = new_transaction
+        self.last_transaction_tid = tid
+        return tid
 
     def commit_transaction(self, tid, site_manager):
         # Save uncommitted changes into sites
