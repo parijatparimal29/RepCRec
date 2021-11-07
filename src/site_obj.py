@@ -1,6 +1,6 @@
 import lock
 
-class site:
+class Site:
     def __init__(self, id):
         self.site_id = id
         self.variables = {}

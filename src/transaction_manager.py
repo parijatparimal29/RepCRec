@@ -1,6 +1,6 @@
 import transaction
 
-class transaction_manager:
+class TransactionManager:
     def __init__(self):
         self.all_transactions = {}
         self.last_transaction_tid = 0
@@ -21,6 +21,11 @@ class transaction_manager:
         return ""
 
     def execute_instruction(self, site_manger, instr, t_type):
+        # if instr is transaction related, process it.
+        # if instr is read or write,
+        # get operation as R or W and call function,
+        # choose site from site manager based on vname & operation extracted from instr.
+        # Perform required action through site manager
         return False
 
     def abort_transaction(self, tid):
@@ -35,7 +40,7 @@ class transaction_manager:
                 type: type of instruction. RO or Regular
         '''
         tid = self.last_transaction_tid + 1
-        new_transaction = transaction.transaction(tid, tick, type)
+        new_transaction = transaction.Transaction(tid, tick, type)
         self.all_transactions[tid] = new_transaction
         self.last_transaction_tid = tid
         return tid

@@ -1,18 +1,37 @@
-import site
+import site_obj
 
-class site_manager:
+class SiteManager:
     def __init__(self):
-        self.sites = {}
-        self.all_site_status = {}
+        self.sites_obj = {}
+        self.active_sites = {}
         self.all_var_last_commit_time = {}
 
     def create_all_sites(self):
-        # Create 10 site objects and store in sites dict.
-        # Initialize site status for each site
-        return False
+        '''
+            This function initializes 10 sites and updates site_manager object with site objects.
+                self : site_manager object
+        '''
+        for i in range(1,11):
+            new_site = site_obj.Site(i)
+            self.sites_obj[i] = new_site
+            self.active_sites[i] = True
     
     def choose_site(self, vname, operation):
-        # choose site based on variable and operation required
+        '''
+            This function returns a chosen site based on variable selected.
+        '''
+        if (vname&1)==0:
+            for i in range(1,11):
+                if self.active_sites[i]:
+                    if operation=="W":
+                        return i
+                    else:
+                        if self.all_var_last_commit_time[vname] > self.sites_obj[i].last_down_time:
+                            return i
+        else:
+            site_num = (1 + vname) % 10
+            if self.active_sites[site_num]:
+                return site_num
         return 0
 
     def read_variable(self, vname, tid):

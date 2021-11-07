@@ -1,4 +1,4 @@
-class transaction:
+class Transaction:
     def __init__(self, id, tick, is_RO):
         self.tid = id
         self.current_instruction = ""
