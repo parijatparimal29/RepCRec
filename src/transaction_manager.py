@@ -14,7 +14,9 @@ class TransactionManager:
 
     def decipher_instruction(self, instr):
         # Decipher instruction
-        if "begin" in instr:
+        if "dump" in instr:
+            return "D", 0, 0, 0
+        elif "begin" in instr:
             tid = int(instr.split('T')[1].split(')')[0])
             return "B", tid, 0, 0
         elif "end" in instr:
@@ -46,7 +48,9 @@ class TransactionManager:
         #print("vname:  ", vname, type(vname),end='')
         #print("val:    ", val, type(val))
 
-        if t_type == "B":
+        if t_type == "D":
+            self.dump()
+        elif t_type == "B":
             if "RO" in instr:
                 self.create_transaction(tid, tick, True)
             else:
