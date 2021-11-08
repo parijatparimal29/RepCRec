@@ -34,18 +34,18 @@ class SiteManager:
                 return site_num
         return 0
 
-    def read_variable(self, vname, tid):
+    def read_variable(self, vname, tid, site_id):
         # choose site and return read value
-        return 0
+        return False
 
-    def write_variable(self, vname, tid, value):
+    def write_variable(self, vname, tid, value, tick):
         # choose and write on site
         return 0
 
-    def fail_site(self, site_id):
+    def fail_site(self, site_id, tick):
         # Update status of failed site and also note the fail time
         return False
 
-    def recover_site(self, site_id):
+    def recover_site(self, site_id, tick):
         # Update status of recovered site and also note the recovery time
         return False
