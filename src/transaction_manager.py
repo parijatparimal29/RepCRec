@@ -11,7 +11,7 @@ class TransactionManager:
         # Detect deadlock using waits_for adjacency matrix for transaction waiting graph
         return False
 
-    def decipher_instruction(self, instr):
+    def decipher_instruction(self, instr:str):
         # Decipher instruction
         if "begin" in instr:
             tid = int(instr.split('T')[1].split(')')[0])
@@ -84,8 +84,9 @@ class TransactionManager:
         # Save uncommitted changes into sites
         return False
 
-    def dump(self, site_manager):
+    def dump(self, sm:SiteManager):
         # Print status of variables in all sites
+        
         return False
 
     def query_state(self, state_manager):

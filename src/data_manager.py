@@ -1,6 +1,6 @@
 import lock
 
-class Site:
+class DataManager:
     def __init__(self, id):
         self.site_id = id
         self.variables = {}
