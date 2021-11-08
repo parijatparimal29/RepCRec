@@ -1,4 +1,5 @@
 import argparse
+from os import read
 import transaction_manager
 import site_manager
 
@@ -6,10 +7,11 @@ def execute_instructions(input_filename):
     tm = transaction_manager.TransactionManager()
     sm = site_manager.SiteManager()
     sm.create_all_sites()
-    output_str = ""
+    tick = 0
     with open(input_filename, "r") as read_file:
-        output_str += tm.process_instruction(sm, read_file.readline)
-    print(output_str)
+        for line in read_file:
+            tick += 1
+            tm.process_instruction(sm, line, tick)
 
 # get filename from arguments
 parser = argparse.ArgumentParser() 

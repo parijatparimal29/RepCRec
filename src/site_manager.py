@@ -2,7 +2,7 @@ import data_manager
 
 class SiteManager:
     def __init__(self):
-        self.sites_obj = {}
+        self.data_managers = {}
         self.active_sites = {}
         self.all_var_last_commit_time = {}
 
@@ -13,7 +13,7 @@ class SiteManager:
         '''
         for i in range(1,11):
             new_site = data_manager.DataManager(i)
-            self.sites_obj[i] = new_site
+            self.data_managers[i] = new_site
             self.active_sites[i] = True
     
     def choose_site(self, vname, operation):
@@ -24,7 +24,7 @@ class SiteManager:
         if (vname&1)==0:
             for i in range(1,11):
                 if self.active_sites[i]:
-                    if self.all_var_last_commit_time[vname] > self.sites_obj[i].last_down_time:
+                    if self.all_var_last_commit_time[vname] > self.data_managers[i].last_down_time:
                         return i
         else:
             site_num = (1 + vname) % 10

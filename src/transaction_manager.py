@@ -1,3 +1,4 @@
+from data_manager import DataManager
 from site_manager import SiteManager
 import transaction
 
@@ -11,7 +12,7 @@ class TransactionManager:
         # Detect deadlock using waits_for adjacency matrix for transaction waiting graph
         return False
 
-    def decipher_instruction(self, instr:str):
+    def decipher_instruction(self, instr):
         # Decipher instruction
         if "begin" in instr:
             tid = int(instr.split('T')[1].split(')')[0])
@@ -35,10 +36,16 @@ class TransactionManager:
             val = int(instr.split(',')[2].split(')')[0])
             return "W", tid, vname, val
 
-    def process_instruction(self, sm:SiteManager, instr:str, tick:int):
+    def process_instruction(self, sm:SiteManager, instr, tick):
         # Using site manager object, process instruction
         # Need to add check for aborted transactions
         t_type, tid, vname, val = self.decipher_instruction(instr)
+
+        #print("t_type: ", t_type, type(t_type),end='')
+        #print("tid:    ", tid, type(tid),end='')
+        #print("vname:  ", vname, type(vname),end='')
+        #print("val:    ", val, type(val))
+
         if t_type == "B":
             if "RO" in instr:
                 self.create_transaction(tid, tick, True)
@@ -78,16 +85,28 @@ class TransactionManager:
         '''
         new_transaction = transaction.Transaction(tid, tick, is_RO)
         self.all_transactions[tid] = new_transaction
-        self.last_transaction_tid = tid
+        #print("Transaction T{} created at {}".format(tid, tick))
 
     def commit_transaction(self, tid, sm):
         # Save uncommitted changes into sites
         return False
 
+    def print_site_details(self, dm:DataManager):
+        print("site {} -".format(dm.site_id),end='')
+        first = True
+        for var in dm.variables:
+            val = dm.variables[var]
+            if first:
+                print(" x{}: {}".format(var,val),end='')
+                first = False
+            else:
+                print(", x{}: {}".format(var,val),end='')
+
     def dump(self, sm:SiteManager):
         # Print status of variables in all sites
-        
-        return False
+        for i in range(1,11):
+            self.print_site_details(sm.data_managers[i])
+            print()
 
     def query_state(self, state_manager):
         # Print state of TM & SM
