@@ -38,7 +38,7 @@ class TransactionManager:
             val = int(instr.split(',')[2].split(')')[0])
             return "W", tid, vname, val
 
-    def process_instruction(self, sm:SiteManager, instr, tick):
+    def process_instruction(self, sm, instr, tick):
         # Using site manager object, process instruction
         # Need to add check for aborted transactions
         t_type, tid, vname, val = self.decipher_instruction(instr)
@@ -93,9 +93,10 @@ class TransactionManager:
 
     def commit_transaction(self, tid, sm):
         # Save uncommitted changes into sites
+        
         return False
 
-    def print_site_details(self, dm:DataManager):
+    def print_site_details(self, dm):
         print("site {} -".format(dm.site_id),end='')
         first = True
         for var in dm.variables:
@@ -106,7 +107,7 @@ class TransactionManager:
             else:
                 print(", x{}: {}".format(var,val),end='')
 
-    def dump(self, sm:SiteManager):
+    def dump(self, sm):
         # Print status of variables in all sites
         for i in range(1,11):
             self.print_site_details(sm.data_managers[i])

@@ -2,6 +2,7 @@ import argparse
 from os import read
 import transaction_manager
 import site_manager
+import os
 
 def execute_instructions(input_filename):
     tm = transaction_manager.TransactionManager()
@@ -13,11 +14,17 @@ def execute_instructions(input_filename):
             tick += 1
             tm.process_instruction(sm, line, tick)
 
+def readFolder(path):
+    filesList = os.listdir(path)
+    for filename in filesList:
+        execute_instructions(filename)
+
+
 # get filename from arguments
 parser = argparse.ArgumentParser() 
-parser.add_argument('--file', help='enter input filename', default='in1.txt')
+parser.add_argument('--folder', help='enter input folder', default='/input')
 args = parser.parse_args()
 # Use arguments to perform requested action
-input_filename = args.file
+input_filename = args.folder
 
-execute_instructions(input_filename)
+readFolder(path)

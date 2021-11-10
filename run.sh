@@ -1,2 +1,2 @@
 #!/bin/sh
-python src/main.py --file input/in1.txt
+python src/main.py --folder /input
