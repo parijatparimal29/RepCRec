@@ -25,6 +25,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--folder', help='enter input folder', default='/input')
 args = parser.parse_args()
 # Use arguments to perform requested action
-input_filename = args.folder
+path = args.folder
 
 readFolder(path)
