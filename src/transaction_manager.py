@@ -43,10 +43,10 @@ class TransactionManager:
         # Need to add check for aborted transactions
         t_type, tid, vname, val = self.decipher_instruction(instr)
 
-        print("t_type: ", t_type, type(t_type),end='')
-        print("tid:    ", tid, type(tid),end='')
-        print("vname:  ", vname, type(vname),end='')
-        print("val:    ", val, type(val))
+        #print("t_type: ", t_type, type(t_type),end='')
+        #print("tid:    ", tid, type(tid),end='')
+        #print("vname:  ", vname, type(vname),end='')
+        #print("val:    ", val, type(val))
 
         if t_type == "D":
             self.dump()
@@ -73,7 +73,7 @@ class TransactionManager:
                     locked_by = int(read_val.split('_')[1])
                     self.waits_for[locked_by] = tid
                     self.wait_queue[tid] = instr
-                    print("Transaction: {} waiting for transaction {} to finish".format(tid, locked_by))
+                    print("T{} waiting for T{} to finish".format(tid, locked_by))
                 else:
                     print("x{}: {}".format(vname, read_val))
         elif t_type == "W":
@@ -84,10 +84,10 @@ class TransactionManager:
                 locked_by = int(write_status.split('_')[1])
                 self.waits_for[locked_by] = tid
                 self.wait_queue[tid] = instr
-                print("Transaction: {} waiting for transaction {} to finish".format(tid, locked_by))
+                print("T{} waiting for T{} to finish".format(tid, locked_by))
             else:
                 self.all_transactions[tid].uncommitted_writes[vname] = val
-                print("Write to sites -{} => x{}: {}".format(write_status, vname, val))
+                print("Write to sites ->{} => x{}: {}".format(write_status, vname, val))
 
     def abort_transaction(self, tid):
         # Abort transaction

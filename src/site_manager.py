@@ -28,12 +28,17 @@ class SiteManager:
         if (vname&1)==0:
             for i in range(1,11):
                 if self.active_sites[i]:
-                    if vname in self.all_var_last_commit_time and self.all_var_last_commit_time[vname] > self.data_managers[i].last_down_time:
+                    if self.data_managers[i].is_recovering:
+                        if vname in self.all_var_last_commit_time and self.all_var_last_commit_time[vname] > self.data_managers[i].last_down_time:
+                            return i
+                    else:
                         return i
         else:
             site_num = (1 + vname) % 10
             if self.active_sites[site_num]:
-                return site_num
+                if self.data_managers[site_num].is_recovering:
+                    if vname in self.all_var_last_commit_time and self.all_var_last_commit_time[vname] > self.data_managers[site_num].last_down_time:
+                        return site_num
         return 0
 
     def get_locks(self, tid, vname, l_type):
@@ -151,9 +156,30 @@ class SiteManager:
                 return "WAIT_"+str(locked_tid)
 
     def fail_site(self, site_id, tick):
-        # Update status of failed site and also note the fail time
-        return False
+        '''
+        This function updates status of data manager / site object.
+        Also clears the lock_table for the site.
+        Input:
+            self    : site_manager object.
+            site_id : ID of site that has failed.
+            tick    : Time at which site failed.
+        '''
+        self.active_sites[site_id] = False
+        dm = self.data_managers[site_id]
+        dm.is_active = False
+        dm.lock_table = {}
+        dm.last_down_time = tick
 
     def recover_site(self, site_id, tick):
-        # Update status of recovered site and also note the recovery time
-        return False
+        '''
+        This function updates status of data manager / site object.
+        Input:
+            self    : site_manager object.
+            site_id : ID of site that has failed.
+            tick    : Time at which site failed.
+        '''
+        self.active_sites[site_id] = True
+        dm = self.data_managers[site_id]
+        dm.is_active = True
+        dm.is_recovering = True
+        dm.last_recovery_time = tick
