@@ -32,6 +32,47 @@ class SiteManager:
                 return site_num
         return 0
 
+    def get_locks(self, tid, vname, l_type):
+        '''
+        Checks if locks are available for the transaction to complete. 
+        Creates / updates locks as required by transaction. 
+        Returns True if lock acquired on all active sites with variable.
+        Returns False if lock cannot be acquired.
+        Input:
+            self    : SiteManager Object.
+            tid     : Transaction id of transaction that requires the locks.
+            vname   : Variable name that needs to be locked.
+            l_type  : Type of lock required - R (Read) or W (Write).
+        '''
+        found_lock = False
+        if (vname&1)==0:
+            for site_num in self.active_sites:
+                if self.active_sites[site_num]:
+                    this_site = self.data_managers[site_num]
+                    if vname not in this_site.lock_table[vname]:
+                        this_site.lock_table[vname] = (tid, l_type)
+                        found_lock = True
+                    elif this_site.lock_table[vname][0] == tid:
+                        if this_site.lock_table[vname][1] != "W":
+                            this_site.lock_table[vname][1] = l_type
+                        found_lock = True
+                    else:
+                        return False
+        else:
+            site_num = (1 + vname) % 10
+            if self.active_sites[site_num]:
+                this_site = self.data_managers[site_num]
+                if vname not in this_site.lock_table[vname]:
+                    this_site.lock_table[vname] = (tid, l_type)
+                    found_lock = True
+                elif this_site.lock_table[vname][0] == tid:
+                    if this_site.lock_table[vname][1] != "W":
+                        this_site.lock_table[vname][1] = l_type
+                    found_lock = True
+                else:
+                    return False
+        return found_lock
+
     def read_variable(self, vname, tid, site_id):
         # choose site and return read value
         return False
