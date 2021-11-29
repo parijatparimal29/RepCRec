@@ -120,9 +120,35 @@ class SiteManager:
             else:
                 return "WAIT_"+str(locked_tid)
 
-    def write_variable(self, vname, tid, value, tick):
-        # choose and write on site
-        return 0
+    def get_list_of_sites_to_write(self, vname):
+        list_active_sites = ""
+        if (vname&1)==0:
+            for i in range(1,11):
+                if self.active_sites[i]:
+                    list_active_sites += " "+str(i)
+        else:
+            site_num = (1 + vname) % 10
+            if self.active_sites[site_num]:
+                list_active_sites += " "+str(site_num)
+        return list_active_sites
+
+    def write_variable(self, vname, tid):
+        '''
+        Gets write locks.
+        If lock fails or site down, return appropriate message for Transaction Manager.
+        Input:
+            self  : site_manager object.
+            vname : variable name that needs to be read.
+            tid   : Transaction id of transaction that requires the read operation.
+        '''
+        found_lock, locked_tid = self.get_locks(tid, vname, "W")
+        if found_lock:
+            return self.get_list_of_sites_to_write(vname)
+        else:
+            if locked_tid==-1:
+                return "ABORT"
+            else:
+                return "WAIT_"+str(locked_tid)
 
     def fail_site(self, site_id, tick):
         # Update status of failed site and also note the fail time

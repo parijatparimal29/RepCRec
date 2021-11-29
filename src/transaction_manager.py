@@ -38,15 +38,15 @@ class TransactionManager:
             val = int(instr.split(',')[2].split(')')[0])
             return "W", tid, vname, val
 
-    def process_instruction(self, sm, instr, tick):
+    def process_instruction(self, sm:SiteManager, instr, tick):
         # Using site manager object, process instruction
         # Need to add check for aborted transactions
         t_type, tid, vname, val = self.decipher_instruction(instr)
 
-        #print("t_type: ", t_type, type(t_type),end='')
-        #print("tid:    ", tid, type(tid),end='')
-        #print("vname:  ", vname, type(vname),end='')
-        #print("val:    ", val, type(val))
+        print("t_type: ", t_type, type(t_type),end='')
+        print("tid:    ", tid, type(tid),end='')
+        print("vname:  ", vname, type(vname),end='')
+        print("val:    ", val, type(val))
 
         if t_type == "D":
             self.dump()
@@ -62,19 +62,32 @@ class TransactionManager:
         elif t_type == "RC":
             sm.recover_site(tid, tick)
         elif t_type == "R":
-            val = sm.read_variable(vname, tid)
-            if val == "ABORT":
+            if vname in self.all_transactions[tid].uncommitted_writes and self.all_transactions[tid].uncommitted_writes[vname][1] > sm.all_var_last_commit_time[vname]:
+                read_val = self.all_transactions[tid].uncommitted_writes[vname][0]
+                print("x{}: {}".format(vname, read_val))
+            else:
+                read_val = sm.read_variable(vname, tid)
+                if read_val == "ABORT":
+                    self.abort_transaction(tid)
+                elif "WAIT" in read_val:
+                    locked_by = int(read_val.split('_')[1])
+                    self.waits_for[locked_by] = tid
+                    self.wait_queue[tid] = instr
+                    print("Transaction: {} waiting for transaction {} to finish".format(tid, locked_by))
+                else:
+                    print("x{}: {}".format(vname, read_val))
+        elif t_type == "W":
+            write_status = sm.write_variable(vname, tid)
+            if write_status == "ABORT":
                 self.abort_transaction(tid)
-            elif "WAIT" in val:
-                locked_by = int(val.split('_')[1])
+            elif "WAIT" in write_status:
+                locked_by = int(write_status.split('_')[1])
                 self.waits_for[locked_by] = tid
                 self.wait_queue[tid] = instr
+                print("Transaction: {} waiting for transaction {} to finish".format(tid, locked_by))
             else:
-                print("x{}:{}".format(vname, val))
-        elif t_type == "W":
-            write_success = sm.write_variable(vname, tid, val, tick)
-            if not write_success:
-                self.abort_transaction(tid)
+                self.all_transactions[tid].uncommitted_writes[vname] = val
+                print("Write to sites -{} => x{}: {}".format(write_status, vname, val))
 
     def abort_transaction(self, tid):
         # Abort transaction
@@ -89,7 +102,7 @@ class TransactionManager:
         '''
         new_transaction = transaction.Transaction(tid, tick, is_RO)
         self.all_transactions[tid] = new_transaction
-        #print("Transaction T{} created at {}".format(tid, tick))
+        print("Transaction T{} created at {}".format(tid, tick))
 
     def commit_transaction(self, tid, sm):
         # Save uncommitted changes into sites
