@@ -16,10 +16,14 @@ class SiteManager:
             self.data_managers[i] = new_site
             self.active_sites[i] = True
     
-    def choose_site(self, vname, operation):
+    def choose_site(self, tid, vname):
         '''
-            This function returns a chosen site based on variable selected.
-            To do: check lock status at site and return site according to lock availability.
+            This function returns a chosen site for read based on variable selected.
+            If no sites are up that contains the variable data, 0 is returned.
+            Returns site num that has the latest value of the variable.
+            Input:
+                self : site_manager object
+                vname  : Variable name that needs to be locked.
         '''
         if (vname&1)==0:
             for i in range(1,11):
@@ -36,13 +40,13 @@ class SiteManager:
         '''
         Checks if locks are available for the transaction to complete. 
         Creates / updates locks as required by transaction. 
-        Returns True if lock acquired on all active sites with variable.
-        Returns False if lock cannot be acquired.
+        Returns (True, tid) if lock acquired on all active sites with variable.
+        Returns (False, locked_by) if lock cannot be acquired.
         Input:
-            self    : SiteManager Object.
-            tid     : Transaction id of transaction that requires the locks.
-            vname   : Variable name that needs to be locked.
-            l_type  : Type of lock required - R (Read) or W (Write).
+            self   : site_manager object
+            tid    : Transaction id of transaction that requires the locks.
+            vname  : Variable name that needs to be locked.
+            l_type : Type of lock required - R (Read) or W (Write).
         '''
         found_lock = False
         if (vname&1)==0:
@@ -53,11 +57,11 @@ class SiteManager:
                         this_site.lock_table[vname] = (tid, l_type)
                         found_lock = True
                     elif this_site.lock_table[vname][0] == tid:
-                        if this_site.lock_table[vname][1] != "W":
+                        if l_type=="W" and this_site.lock_table[vname][1] != "W":
                             this_site.lock_table[vname][1] = l_type
                         found_lock = True
                     else:
-                        return False
+                        return (False, this_site.lock_table[vname][0])
         else:
             site_num = (1 + vname) % 10
             if self.active_sites[site_num]:
@@ -66,12 +70,12 @@ class SiteManager:
                     this_site.lock_table[vname] = (tid, l_type)
                     found_lock = True
                 elif this_site.lock_table[vname][0] == tid:
-                    if this_site.lock_table[vname][1] != "W":
+                    if l_type=="W" and this_site.lock_table[vname][1] != "W":
                         this_site.lock_table[vname][1] = l_type
                     found_lock = True
                 else:
-                    return False
-        return found_lock
+                    return (False, this_site.lock_table[vname][0])
+        return (found_lock, tid)
 
     def read_variable(self, vname, tid, site_id):
         # choose site and return read value

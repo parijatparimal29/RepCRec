@@ -62,14 +62,14 @@ class TransactionManager:
         elif t_type == "RC":
             sm.recover_site(tid, tick)
         elif t_type == "R":
-            dm = sm.choose_site(vname, "R")
-            if dm == 0:
+            val = sm.read_variable(vname, tid)
+            if val == "ABORT":
                 self.abort_transaction(tid)
-            elif dm < 0:
-                self.waits_for[abs(dm)] = tid
+            elif "WAIT" in val:
+                locked_by = int(val.split('_')[1])
+                self.waits_for[locked_by] = tid
                 self.wait_queue[tid] = instr
             else:
-                val = sm.read_variable(vname, tid, dm)
                 print("x{}:{}".format(vname, val))
         elif t_type == "W":
             write_success = sm.write_variable(vname, tid, val, tick)
