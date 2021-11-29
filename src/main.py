@@ -17,7 +17,7 @@ def execute_instructions(input_filename):
 def readFolder(path):
     filesList = os.listdir(path)
     for filename in filesList:
-        execute_instructions(filename)
+        execute_instructions(path+"/"+filename)
 
 
 # get filename from arguments
