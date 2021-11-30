@@ -78,9 +78,10 @@ class TransactionManager:
             if self.all_transactions[tid].is_RO:
                 if vname in self.all_transactions[tid].RO_variables:
                     read_val = self.all_transactions[tid].RO_variables[vname]
-                else:
-                    read_val = int(vname) * 10
                     print("x{}: {}".format(vname, read_val))
+                else:
+                    self.abort_transaction(tid)
+                    print("Data does not exist. Aborting Transaction {}".format(tid))
             elif vname in self.all_transactions[tid].uncommitted_writes and self.all_transactions[tid].uncommitted_writes[vname][1] > sm.all_var_last_commit_time[vname]:
                 read_val = self.all_transactions[tid].uncommitted_writes[vname][0]
                 print("x{}: {}".format(vname, read_val))
