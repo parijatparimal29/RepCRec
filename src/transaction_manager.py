@@ -94,6 +94,7 @@ class TransactionManager:
                     self.wait_queue[tid] = instr
                     print("T{} waiting for T{} to finish".format(tid, locked_by))
                 else:
+                    self.all_transactions[tid].variables_affected.add(vname)
                     print("x{}: {}".format(vname, read_val))
         elif t_type == "W":
             write_status = sm.write_variable(vname, tid)
@@ -105,12 +106,18 @@ class TransactionManager:
                 self.wait_queue[tid] = instr
                 print("T{} waiting for T{} to finish".format(tid, locked_by))
             else:
+                self.all_transactions[tid].variables_affected.add(vname)
                 self.all_transactions[tid].uncommitted_writes[vname] = val
                 print("Write to sites ->{} => x{}: {}".format(write_status, vname, val))
 
     def abort_transaction(self, tid):
-        # Abort transaction
-        return False
+        '''
+        This function updates flag for transaction to abort when end instead of commit.
+        Input:
+            self  : TransactionManager object.
+            tid   : tid of transaction
+        '''
+        self.all_transactions[tid].to_abort = True
 
     def create_transaction(self, sm:SiteManager, tid, tick, is_RO):
         '''
@@ -131,10 +138,21 @@ class TransactionManager:
         self.all_transactions[tid] = new_transaction
         print("Transaction T{} created at {}".format(tid, tick))
 
-    def commit_transaction(self, tid, sm):
-        # Save uncommitted changes into sites
-        
-        return False
+    def commit_transaction(self, tid, sm:SiteManager):
+        '''
+        This function either commits values or abort based on flag on Transaction.
+        Input:
+            self  : TransactionManager object.
+            tid   : tid of transaction
+            sm    : SiteManager object.
+        '''
+        if self.all_transactions[tid].to_abort:
+            sm.clear_locks(tid, self.all_transactions[tid].variables_affected)
+            print("Transaction {} aborted.".format(tid))
+        else:
+            sm.commit_values(self.all_transactions[tid].uncommitted_writes)
+            sm.clear_locks(tid, self.all_transactions[tid].variables_affected)
+            print("Transaction {} committed.".format(tid))
 
     def print_site_details(self, dm):
         '''

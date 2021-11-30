@@ -1,6 +1,53 @@
 class Lock:
-    def __init__(self, l_type, l_vname, l_tid, l_time):
+    def __init__(self, l_tid, l_type):
         self.lock_type = l_type
-        self.lock_vname = l_vname
-        self.lock_tid = l_tid
-        self.lock_time = l_time
+        if l_type == "R":
+            self.R_lock_tids = {l_tid}
+        else:
+            self.W_lock_tid = l_tid
+    
+    def have_lock(self, tid, l_type):
+        if self.lock_type == "W":
+            if self.W_lock_tid == tid:
+                return True
+            else:
+                return False
+        elif l_type == "R" and self.lock_type=="R":
+            if tid in self.R_lock_tids:
+                return True
+            else:
+                return False
+        else:
+            return False
+    
+    def add_lock(self, tid, l_type):
+        if l_type == "R" and self.lock_type == "R":
+            self.R_lock_tids.add(tid)
+            return True
+        elif l_type == "W" and self.lock_type == "R" and len(self.R_lock_tids) <= 1 and tid in self.R_lock_tids:
+            self.lock_type = "W"
+            del self.R_lock_tids
+            self.W_lock_tid = tid
+            return True
+        else:
+            return False
+
+    def release_lock(self, tid):
+        if self.lock_type == "W" and self.W_lock_tid == tid:
+            self.lock_type == "R"
+            self.R_lock_tids = {}
+            del self.W_lock_tid
+        elif self.lock_type == "R" and tid in self.R_lock_tids:
+            self.R_lock_tids.remove(tid)
+        
+    def get_locked_by(self, tid):
+        if self.lock_type == "R":
+            for l_tid in self.R_lock_tids:
+                if l_tid != tid:
+                    return l_tid
+            return tid
+        else:
+            return self.W_lock_tid
+
+
+

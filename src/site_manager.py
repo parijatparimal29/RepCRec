@@ -1,4 +1,5 @@
 import data_manager
+import lock
 
 class SiteManager:
     def __init__(self):
@@ -61,33 +62,29 @@ class SiteManager:
                 if self.active_sites[site_num]:
                     this_site = self.data_managers[site_num]
                     if vname not in this_site.lock_table:
-                        this_site.lock_table[vname] = (tid, l_type)
+                        this_site.lock_table[vname] = lock.Lock(tid, l_type)
                         found_lock = True
-                    elif this_site.lock_table[vname][0] == tid:
-                        if l_type=="W" and this_site.lock_table[vname][1] != "W":
-                            this_site.lock_table[vname][1] = l_type
+                    elif this_site.lock_table[vname].have_lock(tid, l_type) or this_site.lock_table[vname].add_lock(tid, l_type):
                         found_lock = True
                     else:
                         if found_lock:
                             return (False, -1)
                         else:
-                            return (False, this_site.lock_table[vname][0])
+                            return (False, this_site.lock_table[vname].get_locked_by(tid))
         else:
             site_num = 1 + (vname % 10)
             if self.active_sites[site_num]:
                 this_site = self.data_managers[site_num]
                 if vname not in this_site.lock_table:
-                    this_site.lock_table[vname] = (tid, l_type)
+                    this_site.lock_table[vname] = lock.Lock(tid, l_type)
                     found_lock = True
-                elif this_site.lock_table[vname][0] == tid:
-                    if l_type=="W" and this_site.lock_table[vname][1] != "W":
-                        this_site.lock_table[vname][1] = l_type
+                elif this_site.lock_table[vname].have_lock(tid, l_type) or this_site.lock_table[vname].add_lock(tid, l_type):
                     found_lock = True
                 else:
                     if found_lock:
                         return (False, -1)
                     else:
-                        return (False, this_site.lock_table[vname][0])
+                        return (False, this_site.lock_table[vname].get_locked_by(tid))
         return (found_lock, tid)
     
     def get_value_at_site(self, vname, site_num):
@@ -221,3 +218,40 @@ class SiteManager:
                     if vname in self.data_managers[site_num].variables:
                         return self.data_managers[site_num].variables[vname]
         return -1
+    
+    def clear_locks(self, tid, affected_variables):
+        '''
+        This function clears locks held by the transaction.
+        Used when either a transaction commits or aborts.
+        Input:
+            self               : SiteManager object.
+            tid                : transaction id of transaction that commits or aborts.
+            affected_variables : list of variables locked by transaction.
+        '''
+        for x in affected_variables:
+            if (x&1)==0:
+                for i in range(1,11):
+                    if self.active_sites[i]:
+                        self.data_managers[i].lock_table[x].release_lock(tid)
+            else:
+                site_num = 1 + (x % 10)
+                if self.active_sites[site_num]:
+                    self.data_managers[site_num].lock_table[x].release_lock(tid)
+    
+    def commit_values(self, uncommitted_values):
+        '''
+        This function commits values in all active sites.
+        Used when a transaction commits.
+        Input:
+            self               : SiteManager object.
+            uncommitted_values : Values modified by transaction but not yet committed.
+        '''
+        for x in uncommitted_values:
+            if (x&1)==0:
+                for i in range(1,11):
+                    if self.active_sites[i]:
+                        self.data_managers[i].variables[x] = uncommitted_values[x]
+            else:
+                site_num = 1 + (x % 10)
+                if self.active_sites[site_num]:
+                    self.data_managers[site_num].variables[x] = uncommitted_values[x]
