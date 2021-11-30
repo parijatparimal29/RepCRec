@@ -13,7 +13,13 @@ class TransactionManager:
         return False
 
     def decipher_instruction(self, instr):
-        # Decipher instruction
+        '''
+        This function deciphers the instruction to return actionable information.
+        Returns operation_type, transaction_id, variable_name, value as required by the instruction.
+        Input:
+            self  : TransactionManager object.
+            instr : instruction to be deciphered for processing.
+        '''
         if "dump" in instr:
             return "D", 0, 0, 0
         elif "begin" in instr:
@@ -39,10 +45,17 @@ class TransactionManager:
             return "W", tid, vname, val
 
     def process_instruction(self, sm:SiteManager, instr, tick):
-        # Using site manager object, process instruction
-        # Need to add check for aborted transactions
+        '''
+        Processes each instruction by interaction of TM & SM.
+        Input:
+            self  : TransactionManager object.
+            sm    : SiteManager object.
+            instr : instruction to be processed.
+            tick  : current time / tick - when the transaction is being executed.
+        '''
         t_type, tid, vname, val = self.decipher_instruction(instr)
 
+        # Prints deciphered instruction.
         #print("t_type: ", t_type, type(t_type),end='')
         #print("tid:    ", tid, type(tid),end='')
         #print("vname:  ", vname, type(vname),end='')
@@ -52,9 +65,9 @@ class TransactionManager:
             self.dump()
         elif t_type == "B":
             if "RO" in instr:
-                self.create_transaction(tid, tick, True)
+                self.create_transaction(sm, tid, tick, True)
             else:
-                self.create_transaction(tid, tick, False)
+                self.create_transaction(sm, tid, tick, False)
         elif t_type == "E":
             self.commit_transaction(tid, sm)
         elif t_type == "F":
@@ -62,7 +75,13 @@ class TransactionManager:
         elif t_type == "RC":
             sm.recover_site(tid, tick)
         elif t_type == "R":
-            if vname in self.all_transactions[tid].uncommitted_writes and self.all_transactions[tid].uncommitted_writes[vname][1] > sm.all_var_last_commit_time[vname]:
+            if self.all_transactions[tid].is_RO:
+                if vname in self.all_transactions[tid].RO_variables:
+                    read_val = self.all_transactions[tid].RO_variables[vname]
+                else:
+                    read_val = int(vname) * 10
+                    print("x{}: {}".format(vname, read_val))
+            elif vname in self.all_transactions[tid].uncommitted_writes and self.all_transactions[tid].uncommitted_writes[vname][1] > sm.all_var_last_commit_time[vname]:
                 read_val = self.all_transactions[tid].uncommitted_writes[vname][0]
                 print("x{}: {}".format(vname, read_val))
             else:
@@ -93,14 +112,22 @@ class TransactionManager:
         # Abort transaction
         return False
 
-    def create_transaction(self, tid, tick, is_RO):
+    def create_transaction(self, sm:SiteManager, tid, tick, is_RO):
         '''
             This function creates new transactions.
             Input:
-                tick: current tick
-                type: type of instruction. RO or Regular
+                self  : TransactionManager object.
+                sm    : SiteManager object.
+                tid   : tid of transaction
+                tick  : current tick
+                is_RO : type of instruction. RO or Regular
         '''
         new_transaction = transaction.Transaction(tid, tick, is_RO)
+        if is_RO:
+            for i in range(1,21):
+                 ro_val = sm.get_read_only_val(i)
+                 if ro_val != -1:
+                    new_transaction.RO_variables[i] = ro_val
         self.all_transactions[tid] = new_transaction
         print("Transaction T{} created at {}".format(tid, tick))
 
@@ -110,6 +137,12 @@ class TransactionManager:
         return False
 
     def print_site_details(self, dm):
+        '''
+        Prints value of each variable at the given site / data manager.
+        Input:
+            self : TransactionManager object.
+            dm   : DataManager object.
+        '''
         print("site {} -".format(dm.site_id),end='')
         first = True
         for var in dm.variables:
@@ -121,7 +154,12 @@ class TransactionManager:
                 print(", x{}: {}".format(var,val),end='')
 
     def dump(self, sm):
-        # Print status of variables in all sites
+        '''
+        Prints values of all variables present in sites / data_managers.
+        Input:
+            self : TransactionManager object
+            sm   : SiteManager object.
+        '''
         for i in range(1,11):
             self.print_site_details(sm.data_managers[i])
             print()

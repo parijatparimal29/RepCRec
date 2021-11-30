@@ -8,8 +8,8 @@ class SiteManager:
 
     def create_all_sites(self):
         '''
-            This function initializes 10 sites and updates site_manager object with site objects.
-                self : site_manager object
+            This function initializes 10 sites and updates SiteManager object with site objects.
+                self : SiteManager object
         '''
         for i in range(1,11):
             new_site = data_manager.DataManager(i)
@@ -22,7 +22,7 @@ class SiteManager:
             If no sites are up that contains the variable data, 0 is returned.
             Returns site num that has the latest value of the variable.
             Input:
-                self : site_manager object
+                self : SiteManager object
                 vname  : Variable name that needs to be locked.
         '''
         if (vname&1)==0:
@@ -34,11 +34,13 @@ class SiteManager:
                     else:
                         return i
         else:
-            site_num = (1 + vname) % 10
+            site_num = 1 + (vname % 10)
             if self.active_sites[site_num]:
                 if self.data_managers[site_num].is_recovering:
                     if vname in self.all_var_last_commit_time and self.all_var_last_commit_time[vname] > self.data_managers[site_num].last_down_time:
                         return site_num
+                else:
+                    return site_num
         return 0
 
     def get_locks(self, tid, vname, l_type):
@@ -48,7 +50,7 @@ class SiteManager:
         Returns (True, tid) if lock acquired on all active sites with variable.
         Returns (False, locked_by) if lock cannot be acquired.
         Input:
-            self   : site_manager object
+            self   : SiteManager object
             tid    : Transaction id of transaction that requires the locks.
             vname  : Variable name that needs to be locked.
             l_type : Type of lock required - R (Read) or W (Write).
@@ -71,7 +73,7 @@ class SiteManager:
                         else:
                             return (False, this_site.lock_table[vname][0])
         else:
-            site_num = (1 + vname) % 10
+            site_num = 1 + (vname % 10)
             if self.active_sites[site_num]:
                 this_site = self.data_managers[site_num]
                 if vname not in this_site.lock_table:
@@ -93,7 +95,7 @@ class SiteManager:
         Returns value of variable at specified site.
         Returns a default value if variable not initialized at site.
         Input:
-            self     : site_manager object.
+            self     : SiteManager object.
             vname    : variable name that needs to be read.
             site_num : Site number of data manager to read from.
         '''
@@ -108,7 +110,7 @@ class SiteManager:
         Reads the value of variable and returns it.
         If lock fails or site down, return appropriate message for Transaction Manager.
         Input:
-            self  : site_manager object.
+            self  : SiteManager object.
             vname : variable name that needs to be read.
             tid   : Transaction id of transaction that requires the read operation.
         '''
@@ -126,13 +128,19 @@ class SiteManager:
                 return "WAIT_"+str(locked_tid)
 
     def get_list_of_sites_to_write(self, vname):
+        '''
+        Fetches list of sites that will be affected by the write operation.
+        Input:
+            self  : SiteManager object.
+            vname : variable name that needs to be written.
+        '''
         list_active_sites = ""
         if (vname&1)==0:
             for i in range(1,11):
                 if self.active_sites[i]:
                     list_active_sites += " "+str(i)
         else:
-            site_num = (1 + vname) % 10
+            site_num = 1 + (vname % 10)
             if self.active_sites[site_num]:
                 list_active_sites += " "+str(site_num)
         return list_active_sites
@@ -142,8 +150,8 @@ class SiteManager:
         Gets write locks.
         If lock fails or site down, return appropriate message for Transaction Manager.
         Input:
-            self  : site_manager object.
-            vname : variable name that needs to be read.
+            self  : SiteManager object.
+            vname : variable name that needs to be written.
             tid   : Transaction id of transaction that requires the read operation.
         '''
         found_lock, locked_tid = self.get_locks(tid, vname, "W")
@@ -160,7 +168,7 @@ class SiteManager:
         This function updates status of data manager / site object.
         Also clears the lock_table for the site.
         Input:
-            self    : site_manager object.
+            self    : SiteManager object.
             site_id : ID of site that has failed.
             tick    : Time at which site failed.
         '''
@@ -174,7 +182,7 @@ class SiteManager:
         '''
         This function updates status of data manager / site object.
         Input:
-            self    : site_manager object.
+            self    : SiteManager object.
             site_id : ID of site that has failed.
             tick    : Time at which site failed.
         '''
@@ -183,3 +191,33 @@ class SiteManager:
         dm.is_active = True
         dm.is_recovering = True
         dm.last_recovery_time = tick
+
+    def get_read_only_val(self, vname):
+        '''
+        This function fetches the last committed value of the variable from an active site.
+        This read operation does not require two-phase locking, instead it follows multiversion read concurrency.
+        Input:
+            self  : SiteManager object.
+            vname : variable name that needs to be read.
+        '''
+        if (vname&1)==0:
+            for i in range(1,11):
+                if self.active_sites[i]:
+                    if self.data_managers[i].is_recovering:
+                        if vname in self.all_var_last_commit_time and self.all_var_last_commit_time[vname] > self.data_managers[i].last_down_time:
+                            if vname in self.data_managers[i].variables:
+                                return self.data_managers[i].variables[vname]
+                    else:
+                        if vname in self.data_managers[i].variables:
+                            return self.data_managers[i].variables[vname]
+        else:
+            site_num = 1 + (vname % 10)
+            if self.active_sites[site_num]:
+                if self.data_managers[site_num].is_recovering:
+                    if vname in self.all_var_last_commit_time and self.all_var_last_commit_time[vname] > self.data_managers[site_num].last_down_time:
+                        if vname in self.data_managers[site_num].variables:
+                            return self.data_managers[site_num].variables[vname]
+                else:
+                    if vname in self.data_managers[site_num].variables:
+                        return self.data_managers[site_num].variables[vname]
+        return -1

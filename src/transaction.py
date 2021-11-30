@@ -4,5 +4,6 @@ class Transaction:
         self.current_instruction = ""
         self.uncommitted_writes = {}
         self.start_time = tick
-        self.transaction_type = is_RO
+        self.is_RO = is_RO
+        self.RO_variables = {}
 
