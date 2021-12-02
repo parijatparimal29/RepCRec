@@ -13,10 +13,12 @@ def execute_instructions(input_filename):
         for line in read_file:
             tick += 1
             tm.process_instruction(sm, line, tick)
+    tm.query_state(sm)
 
 def readFolder(path):
     filesList = os.listdir(path)
     for filename in filesList:
+        print("Filename:",filename)
         execute_instructions(path+"/"+filename)
 
 

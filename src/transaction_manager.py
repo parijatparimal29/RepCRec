@@ -183,6 +183,20 @@ class TransactionManager:
             self.print_site_details(sm.data_managers[i])
             print()
 
-    def query_state(self, state_manager):
+    def query_state(self, sm):
         # Print state of TM & SM
+        print("Site Manager Details:")
+        for i in range(1,11):
+            self.print_site_details(sm.data_managers[i])
+            print()
+        print("Transaction Manager Details:")
+        print("Transactions:")
+        print("ID  Start Time  Abort  Read Only  RO Variables  Variables Affected  Uncommitted Writes")
+        for tid,transaction in self.all_transactions.items():
+            print(tid,"\t",transaction.start_time,"\t",transaction.to_abort,"\t",
+                transaction.is_RO,"\t",transaction.RO_variables,"\t\t",
+                transaction.variables_affected,"\t",transaction.uncommitted_writes)
+        print("Wait-for:",self.waits_for)
+        print("Wait-Queue:",self.wait_queue)
+
         return False
