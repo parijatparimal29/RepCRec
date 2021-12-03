@@ -9,7 +9,27 @@ class TransactionManager:
         self.wait_queue = {}
 
     def detect_deadlocks(self):
-        # Detect deadlock using waits_for adjacency matrix for transaction waiting graph
+        visited = set()
+        terminal_ids = set()
+        stack = []
+        for t_id in self.waits_for:
+            if t_id not in visited:
+                stack.append(t_id)
+                while stack:
+                    curr_tid = stack.pop()
+                    visited.add(curr_tid)
+                    wait_for_ids = self.waits_for[curr_tid]
+                    is_terminal = True
+
+                    for wait_tid in wait_for_ids:
+                        if wait_tid in self.waits_for:
+                            if wait_tid in visited and wait_tid not in terminal_ids:
+                                return True
+                            stack.append(wait_tid)
+                            is_terminal = False
+                    if is_terminal:
+                        terminal_ids.add(curr_tid)
+
         return False
 
     def decipher_instruction(self, instr):
@@ -91,7 +111,7 @@ class TransactionManager:
                     self.abort_transaction(tid)
                 elif "WAIT" in read_val:
                     locked_by = int(read_val.split('_')[1])
-                    self.waits_for[locked_by] = tid
+                    self.waits_for[tid] = self.waits_for.get(tid, set()).add(locked_by)
                     self.wait_queue[tid] = instr
                     print("T{} waiting for T{} to finish".format(tid, locked_by))
                 else:
@@ -103,7 +123,7 @@ class TransactionManager:
                 self.abort_transaction(tid)
             elif "WAIT" in write_status:
                 locked_by = int(write_status.split('_')[1])
-                self.waits_for[locked_by] = tid
+                self.waits_for[tid] = self.waits_for.get(tid, set()).add(locked_by)
                 self.wait_queue[tid] = instr
                 print("T{} waiting for T{} to finish".format(tid, locked_by))
             else:
@@ -147,13 +167,13 @@ class TransactionManager:
             tid   : tid of transaction
             sm    : SiteManager object.
         '''
-        if self.all_transactions[tid].to_abort:
-            sm.clear_locks(tid, self.all_transactions[tid].variables_affected)
-            print("Transaction {} aborted.".format(tid))
-        else:
+        message = "Transaction {} aborted.".format(tid)
+        if not self.all_transactions[tid].to_abort:
             sm.commit_values(self.all_transactions[tid].uncommitted_writes)
-            sm.clear_locks(tid, self.all_transactions[tid].variables_affected)
-            print("Transaction {} committed.".format(tid))
+            message = "Transaction {} committed.".format(tid)
+        sm.clear_locks(tid, self.all_transactions[tid].variables_affected)
+        self.update_wait_queue(tid)
+        print(message)
 
     def print_site_details(self, dm):
         '''
@@ -200,3 +220,8 @@ class TransactionManager:
         print("Wait-Queue:",self.wait_queue)
 
         return False
+    
+    def update_wait_queue(self, tid):
+        self.waits_for.pop(tid, None)
+        for t_id in self.waits_for:
+            self.waits_for[t_id].discard(tid)
