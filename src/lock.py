@@ -7,21 +7,14 @@ class Lock:
             self.R_lock_tids.add(l_tid)
         else:
             self.W_lock_tid.add(l_tid)
-    
+
     def have_lock(self, tid, l_type):
         if self.lock_type == "W":
-            if tid in self.W_lock_tid:
-                return True
-            else:
-                return False
+            return tid in self.W_lock_tid
         elif l_type == "R" and self.lock_type=="R":
-            if tid in self.R_lock_tids:
-                return True
-            else:
-                return False
-        else:
-            return False
-    
+            return tid in self.R_lock_tids
+        return False
+
     def add_lock(self, tid, l_type):
         if l_type == "R" and self.lock_type == "R":
             self.R_lock_tids.add(tid)
@@ -41,7 +34,7 @@ class Lock:
             self.W_lock_tid = set()
         elif self.lock_type == "R" and tid in self.R_lock_tids:
             self.R_lock_tids.remove(tid)
-        
+
     def get_locked_by(self, tid):
         if self.lock_type == "R":
             for l_tid in self.R_lock_tids:
@@ -51,6 +44,3 @@ class Lock:
         else:
             for l_tid in self.W_lock_tid:
                 return l_tid
-
-
-
