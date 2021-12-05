@@ -26,10 +26,10 @@ class SiteManager:
                 self : SiteManager object
                 vname  : Variable name that needs to be locked.
         '''
-        sites_to_read = [1 + (vname % 10)]
+        site_nums = [1 + (vname % 10)]
         if (vname&1)==0:
-            sites_to_read = range(1,11)
-        for site_num in sites_to_read:
+            site_nums = range(1,11)
+        for site_num in site_nums:
             if self.active_sites[site_num]:
                 if self.data_managers[site_num].is_recovering:
                     if vname in self.all_var_last_commit_time and self.all_var_last_commit_time[vname] > self.data_managers[site_num].last_down_time:
@@ -51,10 +51,10 @@ class SiteManager:
             l_type : Type of lock required - R (Read) or W (Write).
         '''
         found_lock = False
-        sites_to_read = [1 + (vname % 10)]
+        site_nums = [1 + (vname % 10)]
         if (vname&1)==0:
-            sites_to_read = self.active_sites
-        for site_num in sites_to_read:
+            site_nums = self.active_sites
+        for site_num in site_nums:
             if self.active_sites[site_num]:
                 this_site = self.data_managers[site_num]
                 if vname not in this_site.lock_table:
@@ -114,10 +114,10 @@ class SiteManager:
             vname : variable name that needs to be written.
         '''
         list_active_sites = ""
-        sites_to_read = [1 + (vname % 10)]
+        site_nums = [1 + (vname % 10)]
         if (vname&1)==0:
-            sites_to_read = range(1,11)
-        for site_num in sites_to_read:
+            site_nums = range(1,11)
+        for site_num in site_nums:
             if self.active_sites[site_num]:
                 list_active_sites += " "+str(site_num)
         return list_active_sites

@@ -7,6 +7,7 @@ class TransactionManager:
         self.all_transactions = {}
         self.waits_for = {}
         self.wait_queue = {}
+        self.transaction_sequence = []
 
     def detect_deadlocks(self):
         visited = set()
@@ -15,22 +16,41 @@ class TransactionManager:
         for t_id in self.waits_for:
             if t_id not in visited:
                 stack.append(t_id)
+                currentCycle = set()
                 while stack:
                     curr_tid = stack.pop()
                     visited.add(curr_tid)
+                    currentCycle.add(curr_tid)
                     wait_for_ids = self.waits_for[curr_tid]
                     is_terminal = True
 
                     for wait_tid in wait_for_ids:
                         if wait_tid in self.waits_for:
                             if wait_tid in visited and wait_tid not in terminal_ids:
-                                return True
+                                return currentCycle.difference(terminal_ids)
                             stack.append(wait_tid)
                             is_terminal = False
                     if is_terminal:
                         terminal_ids.add(curr_tid)
-
         return False
+
+    def resolve_deadlocks(self, cycle):
+        transactions = [self.all_transactions[tid] for tid in cycle]
+        transactions.sort(key=lambda x: x.start_time)
+
+        youngest_transaction = transactions.pop()
+        youngest_transaction.to_abort = True
+        self.update_wait_queue(youngest_transaction.tid)
+        return False
+
+    def get_next_waiting_instruction(self):
+        instr = ""
+        for seq in self.transaction_sequence:
+            if seq in self.wait_queue:
+                instr = self.wait_queue[seq].pop(0)
+                if len(self.wait_queue[seq]) == 0:
+                    self.wait_queue.pop(seq, None)
+        return instr
 
     def decipher_instruction(self, instr):
         '''
@@ -88,8 +108,10 @@ class TransactionManager:
                 self.create_transaction(sm, tid, tick, True)
             else:
                 self.create_transaction(sm, tid, tick, False)
+            self.transaction_sequence.append(tid)
         elif t_type == "E":
             self.commit_transaction(tid, sm)
+            self.transaction_sequence.remove(tid)
         elif t_type == "F":
             sm.fail_site(tid, tick)
         elif t_type == "RC":
@@ -112,7 +134,7 @@ class TransactionManager:
                 elif "WAIT" in read_val:
                     locked_by = int(read_val.split('_')[1])
                     self.waits_for[tid] = self.waits_for.get(tid, set()).add(locked_by)
-                    self.wait_queue[tid] = instr
+                    self.wait_queue[tid] = self.wait_queue.get(tid, []).append(instr)
                     print("T{} waiting for T{} to finish".format(tid, locked_by))
                 else:
                     self.all_transactions[tid].variables_affected.add(vname)
@@ -124,7 +146,7 @@ class TransactionManager:
             elif "WAIT" in write_status:
                 locked_by = int(write_status.split('_')[1])
                 self.waits_for[tid] = self.waits_for.get(tid, set()).add(locked_by)
-                self.wait_queue[tid] = instr
+                self.wait_queue[tid] = self.wait_queue.get(tid, []).append(instr)
                 print("T{} waiting for T{} to finish".format(tid, locked_by))
             else:
                 self.all_transactions[tid].variables_affected.add(vname)
@@ -220,8 +242,9 @@ class TransactionManager:
         print("Wait-Queue:",self.wait_queue)
 
         return False
-    
+
     def update_wait_queue(self, tid):
         self.waits_for.pop(tid, None)
         for t_id in self.waits_for:
             self.waits_for[t_id].discard(tid)
+        self.wait_queue.pop(tid, None)

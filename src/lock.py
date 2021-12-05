@@ -44,3 +44,6 @@ class Lock:
         else:
             for l_tid in self.W_lock_tid:
                 return l_tid
+
+
+
