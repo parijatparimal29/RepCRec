@@ -1,13 +1,17 @@
 from data_manager import DataManager
 from site_manager import SiteManager
 import transaction
+from queue import Queue
 
 class TransactionManager:
     def __init__(self):
         self.all_transactions = {}
         self.waits_for = {}
-        self.wait_queue = {}
+        self.wait_queue = []
+        self.instruction_queue = Queue()
+        self.dependent_transactions = {}
         self.transaction_sequence = []
+        self.last_transaction_id_on_commit = None
 
     def detect_deadlocks(self):
         visited = set()
@@ -43,14 +47,32 @@ class TransactionManager:
         self.update_wait_queue(youngest_transaction.tid)
         return False
 
-    def get_next_waiting_instruction(self):
-        instr = ""
-        for seq in self.transaction_sequence:
-            if seq in self.wait_queue:
-                instr = self.wait_queue[seq].pop(0)
-                if len(self.wait_queue[seq]) == 0:
-                    self.wait_queue.pop(seq, None)
-        return instr
+    def get_next_instruction(self):
+        if self.last_transaction_id_on_commit is not None:
+            self.update_instruction_queue()
+
+        if self.instruction_queue.empty():
+            return None
+        return self.instruction_queue.get()
+
+    def update_instruction_queue(self):
+        blocked_tids = self.dependent_transactions.pop(self.last_transaction_id_on_commit, set())
+        if blocked_tids:
+            # blocked_tids = sorted(list(blocked_tids))
+            temp_queue = Queue()
+            for tid in blocked_tids:
+                for instr in self.wait_queue:
+                    temp_queue.put(instr)
+                self.wait_queue = []
+                self.waits_for = {}
+                self.dependent_transactions = {}
+            while not self.instruction_queue.empty():
+                temp_queue.put(self.instruction_queue.get())
+            self.instruction_queue = temp_queue
+
+
+    def add_instruction(self, instr):
+        self.instruction_queue.put(instr)
 
     def decipher_instruction(self, instr):
         '''
@@ -112,6 +134,8 @@ class TransactionManager:
         elif t_type == "E":
             self.commit_transaction(tid, sm)
             self.transaction_sequence.remove(tid)
+            self.last_transaction_id_on_commit = tid
+            return (tid, True)
         elif t_type == "F":
             sm.fail_site(tid, tick)
         elif t_type == "RC":
@@ -133,8 +157,9 @@ class TransactionManager:
                     self.abort_transaction(tid)
                 elif "WAIT" in read_val:
                     locked_by = int(read_val.split('_')[1])
-                    self.waits_for[tid] = self.waits_for.get(tid, set()).add(locked_by)
-                    self.wait_queue[tid] = self.wait_queue.get(tid, []).append(instr)
+                    self.waits_for[tid] = self.waits_for.get(tid, set()).union([locked_by])
+                    self.dependent_transactions[locked_by] = self.dependent_transactions.get(locked_by, set()).union([tid])
+                    self.wait_queue.append(instr)
                     print("T{} waiting for T{} to finish".format(tid, locked_by))
                 else:
                     self.all_transactions[tid].variables_affected.add(vname)
@@ -145,13 +170,15 @@ class TransactionManager:
                 self.abort_transaction(tid)
             elif "WAIT" in write_status:
                 locked_by = int(write_status.split('_')[1])
-                self.waits_for[tid] = self.waits_for.get(tid, set()).add(locked_by)
-                self.wait_queue[tid] = self.wait_queue.get(tid, []).append(instr)
+                self.waits_for[tid] = self.waits_for.get(tid, set()).union([locked_by])
+                self.dependent_transactions[locked_by] = self.dependent_transactions.get(locked_by, set()).union([tid])
+                self.wait_queue.append(instr)
                 print("T{} waiting for T{} to finish".format(tid, locked_by))
             else:
                 self.all_transactions[tid].variables_affected.add(vname)
                 self.all_transactions[tid].uncommitted_writes[vname] = val
                 print("Write to sites ->{} => x{}: {}".format(write_status, vname, val))
+        return (tid, False)
 
     def abort_transaction(self, tid):
         '''
@@ -194,7 +221,6 @@ class TransactionManager:
             sm.commit_values(self.all_transactions[tid].uncommitted_writes)
             message = "Transaction {} committed.".format(tid)
         sm.clear_locks(tid, self.all_transactions[tid].variables_affected)
-        self.update_wait_queue(tid)
         print(message)
 
     def print_site_details(self, dm):
@@ -247,4 +273,3 @@ class TransactionManager:
         self.waits_for.pop(tid, None)
         for t_id in self.waits_for:
             self.waits_for[t_id].discard(tid)
-        self.wait_queue.pop(tid, None)
