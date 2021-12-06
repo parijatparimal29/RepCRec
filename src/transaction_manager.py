@@ -10,7 +10,6 @@ class TransactionManager:
         self.wait_queue = []
         self.instruction_queue = Queue()
         self.dependent_transactions = {}
-        self.transaction_sequence = []
         self.last_transaction_id_on_commit = None
 
     def detect_deadlocks(self):
@@ -36,6 +35,7 @@ class TransactionManager:
                             is_terminal = False
                     if is_terminal:
                         terminal_ids.add(curr_tid)
+
         return False
 
     def resolve_deadlocks(self, cycle):
@@ -45,31 +45,32 @@ class TransactionManager:
         youngest_transaction = transactions.pop()
         youngest_transaction.to_abort = True
         self.update_wait_queue(youngest_transaction.tid)
-        return False
+        self.update_instruction_queue(youngest_transaction.tid)
 
     def get_next_instruction(self):
         if self.last_transaction_id_on_commit is not None:
             self.update_instruction_queue()
+            self.last_transaction_id_on_commit = None
 
         if self.instruction_queue.empty():
             return None
         return self.instruction_queue.get()
 
-    def update_instruction_queue(self):
-        blocked_tids = self.dependent_transactions.pop(self.last_transaction_id_on_commit, set())
+    def update_instruction_queue(self, completed_tid = None):
+        if completed_tid is None:
+            completed_tid = self.last_transaction_id_on_commit
+        blocked_tids = self.dependent_transactions.pop(completed_tid, set())
         if blocked_tids:
             # blocked_tids = sorted(list(blocked_tids))
             temp_queue = Queue()
-            for tid in blocked_tids:
-                for instr in self.wait_queue:
-                    temp_queue.put(instr)
-                self.wait_queue = []
-                self.waits_for = {}
-                self.dependent_transactions = {}
+            for instr in self.wait_queue:
+                temp_queue.put(instr)
+            self.wait_queue = []
+            self.waits_for = {}
+            self.dependent_transactions = {}
             while not self.instruction_queue.empty():
                 temp_queue.put(self.instruction_queue.get())
             self.instruction_queue = temp_queue
-
 
     def add_instruction(self, instr):
         self.instruction_queue.put(instr)
@@ -130,10 +131,8 @@ class TransactionManager:
                 self.create_transaction(sm, tid, tick, True)
             else:
                 self.create_transaction(sm, tid, tick, False)
-            self.transaction_sequence.append(tid)
         elif t_type == "E":
             self.commit_transaction(tid, sm)
-            self.transaction_sequence.remove(tid)
             self.last_transaction_id_on_commit = tid
             return (tid, True)
         elif t_type == "F":
