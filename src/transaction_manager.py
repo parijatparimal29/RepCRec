@@ -38,12 +38,13 @@ class TransactionManager:
 
         return False
 
-    def resolve_deadlocks(self, cycle):
+    def resolve_deadlocks(self, sm, cycle):
         transactions = [self.all_transactions[tid] for tid in cycle]
         transactions.sort(key=lambda x: x.start_time)
 
         youngest_transaction = transactions.pop()
         youngest_transaction.to_abort = True
+        sm.clear_locks(youngest_transaction.tid, self.all_transactions[youngest_transaction.tid].variables_affected)
         self.update_wait_queue(youngest_transaction.tid)
         self.update_instruction_queue(youngest_transaction.tid)
 
@@ -125,7 +126,7 @@ class TransactionManager:
         #print("val:    ", val, type(val))
 
         if t_type == "D":
-            self.dump()
+            self.dump(sm)
         elif t_type == "B":
             if "RO" in instr:
                 self.create_transaction(sm, tid, tick, True)
@@ -134,7 +135,6 @@ class TransactionManager:
         elif t_type == "E":
             self.commit_transaction(tid, sm)
             self.last_transaction_id_on_commit = tid
-            return (tid, True)
         elif t_type == "F":
             sm.fail_site(tid, tick)
         elif t_type == "RC":
@@ -177,7 +177,6 @@ class TransactionManager:
                 self.all_transactions[tid].variables_affected.add(vname)
                 self.all_transactions[tid].uncommitted_writes[vname] = val
                 print("Write to sites ->{} => x{}: {}".format(write_status, vname, val))
-        return (tid, False)
 
     def abort_transaction(self, tid):
         '''

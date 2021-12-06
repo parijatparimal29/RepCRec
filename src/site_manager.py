@@ -208,7 +208,7 @@ class SiteManager:
             if (x&1)==0:
                 site_nums = range(1,11)
             for site_num in site_nums:
-                if self.active_sites[site_num]:
+                if self.active_sites[site_num] and x in self.data_managers[site_num].lock_table:
                     self.data_managers[site_num].lock_table[x].release_lock(tid)
 
     def commit_values(self, uncommitted_values):

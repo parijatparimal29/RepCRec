@@ -11,4 +11,4 @@ W(T3,x4,23)
 W(T4,x2,21)
 end(T3)
 W(T4,x4,35)
-end(T4) // T4 will abort because it’s younger
+end(T4) 
