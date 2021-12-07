@@ -7,6 +7,16 @@ class SiteManager:
         self.active_sites = {}
         self.all_var_last_commit_time = {}
 
+    def initialize_site(self, dm:data_manager.DataManager, index):
+        for i in range(2,21,2):
+            dm.variables[i] = 10 * i
+
+        if (index&1)==0:
+            v1 = index - 1
+            v2 = index + 9
+            dm.variables[v1] = 10 * v1
+            dm.variables[v2] = 10 * v2
+
     def create_all_sites(self):
         '''
             This function initializes 10 sites and updates SiteManager object with site objects.
@@ -14,6 +24,7 @@ class SiteManager:
         '''
         for i in range(1,11):
             new_site = data_manager.DataManager(i)
+            self.initialize_site(new_site, i)
             self.data_managers[i] = new_site
             self.active_sites[i] = True
 
@@ -81,7 +92,7 @@ class SiteManager:
         if vname in self.data_managers[site_num].variables:
             return self.data_managers[site_num].variables[vname]
         else:
-            return int(vname) * 10
+            return -1
 
     def read_variable(self, vname, tid):
         '''
