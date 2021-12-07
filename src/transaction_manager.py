@@ -108,6 +108,11 @@ class TransactionManager:
             val = int(instr.split(',')[2].split(')')[0])
             return "W", tid, vname, val
 
+    def decipher_locked_by(self, locked_by_str):
+        tids = locked_by_str.split('[')[1].split(']')[0].split(", ")
+        locked_by_list = list(map(int, tids))
+        return locked_by_list
+
     def process_instruction(self, sm:SiteManager, instr, tick):
         '''
         Processes each instruction by interaction of TM & SM.
@@ -155,11 +160,12 @@ class TransactionManager:
                 if read_val == "ABORT":
                     self.abort_transaction(tid)
                 elif "WAIT" in read_val:
-                    locked_by = int(read_val.split('_')[1])
-                    self.waits_for[tid] = self.waits_for.get(tid, set()).union([locked_by])
-                    self.dependent_transactions[locked_by] = self.dependent_transactions.get(locked_by, set()).union([tid])
-                    self.wait_queue.append(instr)
-                    print("T{} waiting for T{} to finish".format(tid, locked_by))
+                    locked_by_list = self.decipher_locked_by(read_val.split('_')[1])
+                    for locked_by in locked_by_list:
+                        self.waits_for[tid] = self.waits_for.get(tid, set()).union([locked_by])
+                        self.dependent_transactions[locked_by] = self.dependent_transactions.get(locked_by, set()).union([tid])
+                        self.wait_queue.append(instr)
+                        print("T{} waiting for T{} to finish".format(tid, locked_by))
                 else:
                     self.all_transactions[tid].variables_affected.add(vname)
                     print("x{}: {}".format(vname, read_val))
@@ -168,11 +174,12 @@ class TransactionManager:
             if write_status == "ABORT":
                 self.abort_transaction(tid)
             elif "WAIT" in write_status:
-                locked_by = int(write_status.split('_')[1])
-                self.waits_for[tid] = self.waits_for.get(tid, set()).union([locked_by])
-                self.dependent_transactions[locked_by] = self.dependent_transactions.get(locked_by, set()).union([tid])
-                self.wait_queue.append(instr)
-                print("T{} waiting for T{} to finish".format(tid, locked_by))
+                locked_by_list = self.decipher_locked_by(write_status.split('_')[1])
+                for locked_by in locked_by_list:
+                    self.waits_for[tid] = self.waits_for.get(tid, set()).union([locked_by])
+                    self.dependent_transactions[locked_by] = self.dependent_transactions.get(locked_by, set()).union([tid])
+                    self.wait_queue.append(instr)
+                    print("T{} waiting for T{} to finish".format(tid, locked_by))
             else:
                 self.all_transactions[tid].variables_affected.add(vname)
                 self.all_transactions[tid].uncommitted_writes[vname] = val

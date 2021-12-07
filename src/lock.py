@@ -37,10 +37,11 @@ class Lock:
 
     def get_locked_by(self, tid):
         if self.lock_type == "R":
+            tid_list = []
             for l_tid in self.R_lock_tids:
                 if l_tid != tid:
-                    return l_tid
-            return tid
+                    tid_list.append(l_tid)
+            return tid_list
         else:
             for l_tid in self.W_lock_tid:
-                return l_tid
+                return [l_tid]

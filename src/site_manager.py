@@ -75,10 +75,10 @@ class SiteManager:
                     found_lock = True
                 else:
                     if found_lock:
-                        return (False, -1)
+                        return (False, [-1])
                     else:
                         return (False, this_site.lock_table[vname].get_locked_by(tid))
-        return (found_lock, tid)
+        return (found_lock, [tid])
 
     def get_value_at_site(self, vname, site_num):
         '''
@@ -112,7 +112,7 @@ class SiteManager:
             else:
                 return str(self.get_value_at_site(vname, site_num))
         else:
-            if locked_tid==-1:
+            if locked_tid[0]==-1:
                 return "ABORT"
             else:
                 return "WAIT_"+str(locked_tid)
@@ -146,7 +146,7 @@ class SiteManager:
         if found_lock:
             return self.get_list_of_sites_to_write(vname)
         else:
-            if locked_tid==-1:
+            if locked_tid[0]==-1:
                 return "ABORT"
             else:
                 return "WAIT_"+str(locked_tid)
