@@ -183,7 +183,7 @@ class SiteManager:
         dm.is_active = False
         affected_tids = []
         for vname in dm.lock_table:
-            affected_tids = dm.lock_table[vname].get_all_tids()
+            affected_tids.extend(dm.lock_table[vname].get_all_tids())
         dm.lock_table = {}
         dm.last_down_time = tick
         return affected_tids

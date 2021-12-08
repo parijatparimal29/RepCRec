@@ -1,0 +1,14 @@
+// T1 and T2 both abort as site 2 fails after both transactions accessed it.
+// All sites will have only the initial values
+begin(T1)
+begin(T2)
+R(T2, x1)
+W(T1, x2, 202)
+fail(2)
+end(T1)
+beginRO(T3)
+W(T2, x2, 302)
+R(T3, x2)
+end(T2)
+end(T3)
+dump()

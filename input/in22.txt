@@ -1,0 +1,13 @@
+// T3 should read x2 as 202 (committed before T3 started)
+// Final value of x2 should be 302 as written by T3.
+begin(T1)
+begin(T2)
+R(T2, x1)
+W(T1, x2, 202)
+end(T1)
+beginRO(T3)
+W(T2, x2, 302)
+R(T3, x2)
+end(T2)
+end(T3)
+dump()
