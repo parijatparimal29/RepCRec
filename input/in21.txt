@@ -1,7 +1,12 @@
+// T1 waits for T2 to get lock on x2
+// T2 promotes its lock and executes write
+// T1 executes write after T2 commits.
+// Final value of x2 should be 202, even though instruction sequence is different.
 begin(T1)
 begin(T2)
 R(T2, x2)
 W(T1, x2, 202)
 W(T2, x2, 302)
+end(T2)
 end(T1)
 dump()

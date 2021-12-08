@@ -11,6 +11,8 @@ def execute_instructions(input_filename):
     tick = 0
     with open(input_filename, "r") as read_file:
         for line in read_file:
+            if line.startswith("//"):
+                continue
             tm.add_instruction(line)
             tick += 1
             tm.process_instruction(sm, tm.get_next_instruction(), tick)
