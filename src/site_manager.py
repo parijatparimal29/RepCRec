@@ -235,5 +235,7 @@ class SiteManager:
             if (x&1)==0:
                 site_nums = range(1,11)
             for site_num in site_nums:
-                if self.active_sites[site_num]:
-                    self.data_managers[site_num].variables[x] = uncommitted_values[x]
+                if self.active_sites[site_num] and (uncommitted_values[x][1] < \
+                self.data_managers[site_num].last_down_time or \
+                uncommitted_values[x][1] > self.data_managers[site_num].last_recovery_time):
+                    self.data_managers[site_num].variables[x] = uncommitted_values[x][0]

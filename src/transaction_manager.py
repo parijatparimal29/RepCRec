@@ -113,6 +113,15 @@ class TransactionManager:
         locked_by_list = list(map(int, tids))
         return locked_by_list
 
+    def is_available_to_read(self, sm:SiteManager, vname):
+        site_nums = [1 + (vname % 10)]
+        if (vname&1)==0:
+            site_nums = range(1,11)
+        for site_num in site_nums:
+            if sm.active_sites[site_num]:
+                return True
+        return False
+
     def process_instruction(self, sm:SiteManager, instr, tick):
         '''
         Processes each instruction by interaction of TM & SM.
@@ -147,8 +156,11 @@ class TransactionManager:
         elif t_type == "R":
             if self.all_transactions[tid].is_RO:
                 if vname in self.all_transactions[tid].RO_variables:
-                    read_val = self.all_transactions[tid].RO_variables[vname]
-                    print("x{}: {}".format(vname, read_val))
+                    if self.is_available_to_read(sm, vname):
+                        read_val = self.all_transactions[tid].RO_variables[vname]
+                        print("x{}: {}".format(vname, read_val))
+                    else:
+                        self.abort_transaction(tid)
                 else:
                     self.abort_transaction(tid)
                     print("Data does not exist. Aborting Transaction {}".format(tid))
@@ -182,7 +194,7 @@ class TransactionManager:
                     print("T{} waiting for T{} to finish".format(tid, locked_by))
             else:
                 self.all_transactions[tid].variables_affected.add(vname)
-                self.all_transactions[tid].uncommitted_writes[vname] = val
+                self.all_transactions[tid].uncommitted_writes[vname] = [val, tick]
                 print("Write to sites ->{} => x{}: {}".format(write_status, vname, val))
 
     def abort_transaction(self, tid):
@@ -221,10 +233,10 @@ class TransactionManager:
             tid   : tid of transaction
             sm    : SiteManager object.
         '''
-        message = "Transaction {} aborted.".format(tid)
+        message = "T{} aborts".format(tid)
         if not self.all_transactions[tid].to_abort:
             sm.commit_values(self.all_transactions[tid].uncommitted_writes)
-            message = "Transaction {} committed.".format(tid)
+            message = "T{} commits".format(tid)
         sm.clear_locks(tid, self.all_transactions[tid].variables_affected)
         print(message)
 
