@@ -43,6 +43,7 @@ class TransactionManager:
         transactions.sort(key=lambda x: x.start_time)
 
         youngest_transaction = transactions.pop()
+        print("T{} aborts".format(youngest_transaction.tid))
         youngest_transaction.to_abort = True
         sm.clear_locks(youngest_transaction.tid, self.all_transactions[youngest_transaction.tid].variables_affected)
         self.update_wait_queue(youngest_transaction.tid)
@@ -150,7 +151,9 @@ class TransactionManager:
             self.commit_transaction(tid, sm)
             self.last_transaction_id_on_commit = tid
         elif t_type == "F":
-            sm.fail_site(tid, tick)
+            affected_tids = sm.fail_site(tid, tick)
+            for affected_tid in affected_tids:
+                self.abort_transaction(affected_tid)
         elif t_type == "RC":
             sm.recover_site(tid, tick)
         elif t_type == "R":
@@ -171,13 +174,16 @@ class TransactionManager:
                 read_val = sm.read_variable(vname, tid)
                 if read_val == "ABORT":
                     self.abort_transaction(tid)
+                elif "WAIT_S" in read_val:
+                    print("Waiting for Site {} to recover".format(read_val.split('S')[1]))
                 elif "WAIT" in read_val:
                     locked_by_list = self.decipher_locked_by(read_val.split('_')[1])
                     for locked_by in locked_by_list:
                         self.waits_for[tid] = self.waits_for.get(tid, set()).union([locked_by])
                         self.dependent_transactions[locked_by] = self.dependent_transactions.get(locked_by, set()).union([tid])
                         self.wait_queue.append(instr)
-                        print("T{} waiting for T{} to finish".format(tid, locked_by))
+                        if not self.all_transactions[tid].to_abort:
+                            print("T{} waiting for T{} to finish".format(tid, locked_by))
                 else:
                     self.all_transactions[tid].variables_affected.add(vname)
                     print("x{}: {}".format(vname, read_val))
@@ -191,7 +197,8 @@ class TransactionManager:
                     self.waits_for[tid] = self.waits_for.get(tid, set()).union([locked_by])
                     self.dependent_transactions[locked_by] = self.dependent_transactions.get(locked_by, set()).union([tid])
                     self.wait_queue.append(instr)
-                    print("T{} waiting for T{} to finish".format(tid, locked_by))
+                    if not self.all_transactions[tid].to_abort:
+                        print("T{} waiting for T{} to finish".format(tid, locked_by))
             else:
                 self.all_transactions[tid].variables_affected.add(vname)
                 self.all_transactions[tid].uncommitted_writes[vname] = [val, tick]
@@ -204,6 +211,7 @@ class TransactionManager:
             self  : TransactionManager object.
             tid   : tid of transaction
         '''
+        print("T{} aborts".format(tid))
         self.all_transactions[tid].to_abort = True
 
     def create_transaction(self, sm:SiteManager, tid, tick, is_RO):
@@ -233,7 +241,7 @@ class TransactionManager:
             tid   : tid of transaction
             sm    : SiteManager object.
         '''
-        message = "T{} aborts".format(tid)
+        message = "T{} aborted at commit time".format(tid)
         if not self.all_transactions[tid].to_abort:
             sm.commit_values(self.all_transactions[tid].uncommitted_writes)
             message = "T{} commits".format(tid)

@@ -30,7 +30,7 @@ def execute_instructions(input_filename):
             break
 
 
-    tm.query_state(sm)
+    #tm.query_state(sm)
 
 def readFolder(path):
     filesList = os.listdir(path)

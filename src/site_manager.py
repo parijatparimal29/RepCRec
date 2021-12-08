@@ -45,6 +45,8 @@ class SiteManager:
                 if self.data_managers[site_num].is_recovering:
                     if vname in self.all_var_last_commit_time and self.all_var_last_commit_time[vname] > self.data_managers[site_num].last_down_time:
                         return site_num
+                    else:
+                        return site_num + 20
                 else:
                     return site_num
         return 0
@@ -109,6 +111,8 @@ class SiteManager:
             site_num = self.choose_site(vname)
             if site_num==0:
                 return "ABORT"
+            elif site_num > 20:
+                return "WAIT_S"+str(site_num - 20)
             else:
                 return str(self.get_value_at_site(vname, site_num))
         else:
@@ -163,8 +167,12 @@ class SiteManager:
         self.active_sites[site_id] = False
         dm = self.data_managers[site_id]
         dm.is_active = False
+        affected_tids = []
+        for vname in dm.lock_table:
+            affected_tids = dm.lock_table[vname].get_all_tids()
         dm.lock_table = {}
         dm.last_down_time = tick
+        return affected_tids
 
     def recover_site(self, site_id, tick):
         '''

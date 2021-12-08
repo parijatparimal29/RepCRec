@@ -45,3 +45,10 @@ class Lock:
         else:
             for l_tid in self.W_lock_tid:
                 return [l_tid]
+
+    def get_all_tids(self):
+        if self.lock_type == "R":
+            return self.R_lock_tids
+        else:
+            for l_tid in self.W_lock_tid:
+                return [l_tid]
