@@ -43,7 +43,9 @@ class SiteManager:
         for site_num in site_nums:
             if self.active_sites[site_num]:
                 if self.data_managers[site_num].is_recovering:
-                    if vname in self.all_var_last_commit_time and self.all_var_last_commit_time[vname] > self.data_managers[site_num].last_down_time:
+                    if vname not in self.all_var_last_commit_time or \
+                    (vname in self.all_var_last_commit_time \
+                    and self.all_var_last_commit_time[vname] >= self.data_managers[site_num].last_down_time):
                         return site_num
                     else:
                         return site_num + 20
