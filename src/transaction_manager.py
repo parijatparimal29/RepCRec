@@ -43,7 +43,8 @@ class TransactionManager:
         transactions.sort(key=lambda x: x.start_time)
 
         youngest_transaction = transactions.pop()
-        print("T{} aborts".format(youngest_transaction.tid))
+        if not youngest_transaction.to_abort:
+            print("T{} aborts".format(youngest_transaction.tid))
         youngest_transaction.to_abort = True
         sm.clear_locks(youngest_transaction.tid, self.all_transactions[youngest_transaction.tid].variables_affected)
         self.update_wait_queue(youngest_transaction.tid)
@@ -173,7 +174,8 @@ class TransactionManager:
             else:
                 read_val = sm.read_variable(vname, tid)
                 if read_val == "ABORT":
-                    self.abort_transaction(tid)
+                    if not self.all_transactions[tid].to_abort:
+                        self.abort_transaction(tid)
                 elif "WAIT_S" in read_val:
                     print("Waiting for Site {} to recover".format(read_val.split('S')[1]))
                 elif "WAIT" in read_val:
@@ -190,7 +192,8 @@ class TransactionManager:
         elif t_type == "W":
             write_status = sm.write_variable(vname, tid)
             if write_status == "ABORT":
-                self.abort_transaction(tid)
+                if not self.all_transactions[tid].to_abort:
+                    self.abort_transaction(tid)
             elif "WAIT" in write_status:
                 locked_by_list = self.decipher_locked_by(write_status.split('_')[1])
                 for locked_by in locked_by_list:
