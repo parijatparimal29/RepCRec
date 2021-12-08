@@ -149,7 +149,7 @@ class TransactionManager:
             else:
                 self.create_transaction(sm, tid, tick, False)
         elif t_type == "E":
-            self.commit_transaction(tid, sm)
+            self.commit_transaction(tid, sm, tick)
             self.last_transaction_id_on_commit = tid
         elif t_type == "F":
             affected_tids = sm.fail_site(tid, tick)
@@ -236,17 +236,18 @@ class TransactionManager:
         self.all_transactions[tid] = new_transaction
         print("Transaction T{} created at {}".format(tid, tick))
 
-    def commit_transaction(self, tid, sm:SiteManager):
+    def commit_transaction(self, tid, sm:SiteManager, tick):
         '''
         This function either commits values or abort based on flag on Transaction.
         Input:
             self  : TransactionManager object.
             tid   : tid of transaction
             sm    : SiteManager object.
+            tick  : current tick
         '''
         message = "T{} aborted at commit time".format(tid)
         if not self.all_transactions[tid].to_abort:
-            sm.commit_values(self.all_transactions[tid].uncommitted_writes)
+            sm.commit_values(self.all_transactions[tid].uncommitted_writes, tick)
             message = "T{} commits".format(tid)
         sm.clear_locks(tid, self.all_transactions[tid].variables_affected)
         print(message)

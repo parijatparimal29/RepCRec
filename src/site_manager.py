@@ -43,7 +43,11 @@ class SiteManager:
         for site_num in site_nums:
             if self.active_sites[site_num]:
                 if self.data_managers[site_num].is_recovering:
-                    if vname not in self.all_var_last_commit_time or \
+                    if vname in self.all_var_last_commit_time and \
+                    self.all_var_last_commit_time[vname] > self.data_managers[site_num].last_down_time and \
+                    self.all_var_last_commit_time[vname] < self.data_managers[site_num].last_recovery_time:
+                        return site_num + 20
+                    elif vname not in self.all_var_last_commit_time or \
                     (vname in self.all_var_last_commit_time \
                     and self.all_var_last_commit_time[vname] >= self.data_managers[site_num].last_down_time):
                         return site_num
@@ -72,7 +76,12 @@ class SiteManager:
         for site_num in site_nums:
             if self.active_sites[site_num]:
                 this_site = self.data_managers[site_num]
-                if vname not in this_site.lock_table:
+                if l_type == "R" and this_site.is_recovering and \
+                vname in self.all_var_last_commit_time and \
+                self.all_var_last_commit_time[vname] > this_site.last_down_time and \
+                self.all_var_last_commit_time[vname] < this_site.last_recovery_time:
+                    continue
+                elif vname not in this_site.lock_table:
                     this_site.lock_table[vname] = lock.Lock(tid, l_type)
                     found_lock = True
                 elif this_site.lock_table[vname].have_lock(tid, l_type) or this_site.lock_table[vname].add_lock(tid, l_type):
@@ -82,7 +91,7 @@ class SiteManager:
                         return (False, [-1])
                     else:
                         return (False, this_site.lock_table[vname].get_locked_by(tid))
-        return (found_lock, [tid])
+        return (found_lock, [0])
 
     def get_value_at_site(self, vname, site_num):
         '''
@@ -120,6 +129,9 @@ class SiteManager:
         else:
             if locked_tid[0]==-1:
                 return "ABORT"
+            elif locked_tid[0]==0:
+                site_num = self.choose_site(vname)
+                return "WAIT_S"+str(site_num - 20)
             else:
                 return "WAIT_"+str(locked_tid)
 
@@ -232,13 +244,14 @@ class SiteManager:
                 if self.active_sites[site_num] and x in self.data_managers[site_num].lock_table:
                     self.data_managers[site_num].lock_table[x].release_lock(tid)
 
-    def commit_values(self, uncommitted_values):
+    def commit_values(self, uncommitted_values, tick):
         '''
         This function commits values in all active sites.
         Used when a transaction commits.
         Input:
             self               : SiteManager object.
             uncommitted_values : Values modified by transaction but not yet committed.
+            tick               : current tick
         '''
         for x in uncommitted_values:
             site_nums = [1 + (x % 10)]
@@ -249,3 +262,4 @@ class SiteManager:
                 self.data_managers[site_num].last_down_time or \
                 uncommitted_values[x][1] > self.data_managers[site_num].last_recovery_time):
                     self.data_managers[site_num].variables[x] = uncommitted_values[x][0]
+                    self.all_var_last_commit_time[x] = tick
